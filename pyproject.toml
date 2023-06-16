@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "athena-search"
+version = "0.1.0"
+description = ""
+authors = ["Smail KOURTA <sk10691@nyu.edu>"]
+readme = "README.md"
+packages = [{include = "athena_search"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+athena = {path = "/scratch/sk10691/workspace/gos/gos", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

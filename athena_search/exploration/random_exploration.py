@@ -32,7 +32,7 @@ class RandomExploration:
                 tiramisu.tiramisu_actions.TiramisuAction.get_types()
             )
 
-            if action_type != tiramisu_actions.TiramisuActionType.FUSION:
+            if action_type != tiramisu_actions.TiramisuActionType.REVERSAL:
                 continue
 
             print("action_type: ", action_type)
@@ -168,18 +168,23 @@ class RandomExploration:
         # Fusion
         elif action_type == tiramisu_actions.TiramisuActionType.FUSION:
             assert len(candidate_params) == 1
+            assert type(candidate_params[0]) == tuple
             computations = []
             for node in candidate_params[0]:
                 computations.extend(self.schedule.tree.get_candidate_computations(node))
             return [tiramisu_actions.Fusion(candidate_params[0], computations)]
 
         elif action_type == tiramisu_actions.TiramisuActionType.REVERSAL:
-            computations = []
-            for node in candidate_params:
-                computations.extend(
-                    self.schedule.tree.get_iterator_node(node).computations_list
+            assert type(candidate_params) == str
+            computations = self.schedule.tree.get_candidate_computations(
+                candidate_params
+            )
+            return [
+                tiramisu_actions.Reversal(
+                    [candidate_params],
+                    computations,
                 )
-            return [tiramisu_actions.Reversal(candidate_params, computations)]
+            ]
 
     def get_candidates(self, action_type: tiramisu_actions.TiramisuActionType):
         if self.schedule.tree is None:

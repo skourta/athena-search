@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import List
 from athena.tiramisu import TiramisuProgram
@@ -19,51 +20,70 @@ class RandomExploration:
         self.tiling_factors = tiling_factors
         self.unrolling_factors = unrolling_factors
 
-    def run(self):
+    def run(self, max_depth: int = 10):
         if self.schedule.tree is None:
             raise ValueError("The schedule tree is None")
 
-        action_type = None
-        candidate = None
+        while len(self.schedule.optims_list) < max_depth:
+            action_type = None
+            candidate = None
+            tmp_schedule = self.schedule.copy()
 
-        while action_type is None or candidate is None:
-            # Randomly select an Action to apply
-            action_type = random.choice(
-                tiramisu.tiramisu_actions.TiramisuAction.get_types()
-            )
+            while action_type is None or candidate is None:
+                # Randomly select an Action to apply
+                action_type = random.choice(
+                    tiramisu.tiramisu_actions.TiramisuAction.get_types()
+                )
+                # # Force an action
+                # if action_type != tiramisu_actions.TiramisuActionType.REVERSAL:
+                #     continue
 
-            if action_type != tiramisu_actions.TiramisuActionType.REVERSAL:
+                print("action_type: ", action_type)
+
+                candidates = self.get_candidates(action_type)
+
+                print("candidates: ", candidates)
+
+                if len(candidates) == 0:
+                    raise ValueError("No candidates found")
+
+                candidate = None
+                # Randomly select a candidate
+                if type(candidates) == list:
+                    candidate = random.choice(candidates)
+                    if type(candidate) is not list:
+                        candidate = [candidate]
+                elif type(candidates) == dict:
+                    # Choose a random root (key)
+                    root = random.choice(list(candidates.keys()))
+                    # choose a random candidate from the root's list of candidates
+                    if candidates[root]:
+                        candidate = random.choice(candidates[root])
+
+                print("candidate: ", candidate)
+
+            try:
+                tmp_schedule.add_optimizations(
+                    self.initialize_actions(action_type, candidate)
+                )
+            except SkipActionException as e:
+                logging.info(f"Skipping action: {e}")
                 continue
 
-            print("action_type: ", action_type)
+            logging.info(f"schedule: { tmp_schedule}")
 
-            candidates = self.get_candidates(action_type)
+            try:
+                if tmp_schedule.is_legal():
+                    logging.info("Applying action")
+                    logging.info(tmp_schedule.apply_schedule(nb_exec_tiems=10))
+                    self.schedule = tmp_schedule
 
-            print("candidates: ", candidates)
-
-            if len(candidates) == 0:
-                raise ValueError("No candidates found")
-
-            candidate = None
-            # Randomly select a candidate
-            if type(candidates) == list:
-                candidate = random.choice(candidates)
-                if type(candidate) is not list:
-                    candidate = [candidate]
-            elif type(candidates) == dict:
-                # Choose a random root (key)
-                root = random.choice(list(candidates.keys()))
-                # choose a random candidate from the root's list of candidates
-                if candidates[root]:
-                    candidate = random.choice(candidates[root])
-
-            print("candidate: ", candidate)
-
-        self.schedule.add_optimizations(self.initialize_actions(action_type, candidate))
-
-        print("schedule: ", self.schedule)
-        print(self.schedule.is_legal())
-        print(self.schedule.apply_schedule(nb_exec_tiems=10))
+            except SkipActionException as e:
+                logging.info(f"Skipping action: {e}")
+                continue
+            except Exception as e:
+                logging.info(f"Skipping action due to an Exception: {e}")
+                continue
 
     def initialize_actions(
         self,
@@ -158,12 +178,12 @@ class RandomExploration:
         elif action_type == tiramisu_actions.TiramisuActionType.UNROLLING:
             assert len(candidate_params) == 1
 
-            computation = self.schedule.tree.get_iterator_node(
+            computations = self.schedule.tree.get_candidate_computations(
                 candidate_params[0]
-            ).computations_list[0]
+            )
 
             params = [candidate_params[0], random.choice(self.unrolling_factors)]
-            return [tiramisu_actions.Unrolling(params, [computation])]
+            return [tiramisu_actions.Unrolling(params, computations)]
 
         # Fusion
         elif action_type == tiramisu_actions.TiramisuActionType.FUSION:

@@ -1,3 +1,4 @@
+import logging
 from athena.tiramisu.tiramisu_actions.fusion import Fusion
 from athena.tiramisu import TiramisuProgram, tiramisu_actions
 from athena_search.exploration.random_exploration import RandomExploration
@@ -8,7 +9,7 @@ import tests.utils as test_utils
 
 
 if __name__ == "__main__":
-    BaseConfig.init()
+    BaseConfig.init(logging_level=logging.INFO)
 
     tiramisu_program = test_utils.multiple_roots_sample()
 

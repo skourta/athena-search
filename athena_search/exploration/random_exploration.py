@@ -21,8 +21,7 @@ class RandomExploration:
         self.unrolling_factors = unrolling_factors
 
     def run(self, max_depth: int = 10):
-        if self.schedule.tree is None:
-            raise ValueError("The schedule tree is None")
+        assert self.schedule.tree
 
         while len(self.schedule.optims_list) < max_depth:
             action_type = None
@@ -38,11 +37,11 @@ class RandomExploration:
                 # if action_type != tiramisu_actions.TiramisuActionType.REVERSAL:
                 #     continue
 
-                print("action_type: ", action_type)
+                logging.info(f"action_type: {action_type}")
 
-                candidates = self.get_candidates(action_type)
+                candidates = self.get_candidates(action_type, tmp_schedule)
 
-                print("candidates: ", candidates)
+                logging.info(f"candidates: {candidates}")
 
                 if len(candidates) == 0:
                     raise ValueError("No candidates found")
@@ -60,11 +59,11 @@ class RandomExploration:
                     if candidates[root]:
                         candidate = random.choice(candidates[root])
 
-                print("candidate: ", candidate)
+                logging.info(f"chose candidate: {candidate}")
 
             try:
                 tmp_schedule.add_optimizations(
-                    self.initialize_actions(action_type, candidate)
+                    self.initialize_actions(action_type, candidate, tmp_schedule)
                 )
             except SkipActionException as e:
                 logging.info(f"Skipping action: {e}")
@@ -74,9 +73,11 @@ class RandomExploration:
 
             try:
                 if tmp_schedule.is_legal():
-                    logging.info("Applying action")
+                    logging.info("Schedule is legal")
                     logging.info(tmp_schedule.apply_schedule(nb_exec_tiems=10))
                     self.schedule = tmp_schedule
+                else:
+                    logging.info("Schedule is not legal")
 
             except SkipActionException as e:
                 logging.info(f"Skipping action: {e}")
@@ -89,11 +90,10 @@ class RandomExploration:
         self,
         action_type: tiramisu_actions.TiramisuActionType,
         candidate_params,
+        schedule: tiramisu.Schedule,
     ) -> List[tiramisu_actions.TiramisuAction]:
         # Check if the schedule tree is None
-        if self.schedule.tree is None:
-            raise ValueError("The schedule tree is None")
-
+        assert schedule.tree
         # Get the computations associated with the candidate parameters (works for most computations)
 
         # Interchange
@@ -101,7 +101,7 @@ class RandomExploration:
             computations = []
             for node in candidate_params:
                 computations.extend(
-                    self.schedule.tree.get_iterator_node(node).computations_list
+                    schedule.tree.get_iterator_node(node).computations_list
                 )
             return [tiramisu_actions.Interchange(candidate_params, computations)]
 
@@ -111,7 +111,7 @@ class RandomExploration:
             computations = []
             for node in candidate_params:
                 computations.extend(
-                    self.schedule.tree.get_iterator_node(node).computations_list
+                    schedule.tree.get_iterator_node(node).computations_list
                 )
             params = [
                 candidate_params[0],
@@ -127,7 +127,7 @@ class RandomExploration:
             computations = []
             for node in candidate_params:
                 computations.extend(
-                    self.schedule.tree.get_iterator_node(node).computations_list
+                    schedule.tree.get_iterator_node(node).computations_list
                 )
             params = [
                 candidate_params[0],
@@ -147,7 +147,7 @@ class RandomExploration:
                 actions.append(
                     tiramisu_actions.Parallelization(
                         [node],
-                        self.schedule.tree.get_candidate_computations(node),
+                        schedule.tree.get_candidate_computations(node),
                     )
                 )
             return actions
@@ -155,19 +155,17 @@ class RandomExploration:
         # Skewing
         elif action_type == tiramisu_actions.TiramisuActionType.SKEWING:
             assert len(candidate_params) == 2
-
-            computations = self.schedule.tree.get_candidate_computations(
-                candidate_params[0]
-            )
-            loop_levels = self.schedule.tree.get_iterator_levels(candidate_params)
+            assert schedule.tree
+            computations = schedule.tree.get_candidate_computations(candidate_params[0])
+            loop_levels = schedule.tree.get_iterator_levels(candidate_params)
 
             try:
                 factors = tiramisu_actions.Skewing.get_factors(
+                    schedule=schedule,
                     loop_levels=loop_levels,
-                    current_schedule=self.schedule.optims_list,
-                    tiramisu_program=self.tiramisu_program,
                     comps_skewed_loops=computations,
                 )
+
             except ValueError:
                 raise SkipActionException("Skewing factors not found")
             params = [candidate_params[0], candidate_params[1], factors[0], factors[1]]
@@ -178,9 +176,7 @@ class RandomExploration:
         elif action_type == tiramisu_actions.TiramisuActionType.UNROLLING:
             assert len(candidate_params) == 1
 
-            computations = self.schedule.tree.get_candidate_computations(
-                candidate_params[0]
-            )
+            computations = schedule.tree.get_candidate_computations(candidate_params[0])
 
             params = [candidate_params[0], random.choice(self.unrolling_factors)]
             return [tiramisu_actions.Unrolling(params, computations)]
@@ -191,14 +187,12 @@ class RandomExploration:
             assert type(candidate_params[0]) == tuple
             computations = []
             for node in candidate_params[0]:
-                computations.extend(self.schedule.tree.get_candidate_computations(node))
+                computations.extend(schedule.tree.get_candidate_computations(node))
             return [tiramisu_actions.Fusion(candidate_params[0], computations)]
 
         elif action_type == tiramisu_actions.TiramisuActionType.REVERSAL:
             assert type(candidate_params) == str
-            computations = self.schedule.tree.get_candidate_computations(
-                candidate_params
-            )
+            computations = schedule.tree.get_candidate_computations(candidate_params)
             return [
                 tiramisu_actions.Reversal(
                     [candidate_params],
@@ -206,25 +200,29 @@ class RandomExploration:
                 )
             ]
 
-    def get_candidates(self, action_type: tiramisu_actions.TiramisuActionType):
-        if self.schedule.tree is None:
+    def get_candidates(
+        self,
+        action_type: tiramisu_actions.TiramisuActionType,
+        schedule: tiramisu.Schedule,
+    ):
+        if schedule.tree is None:
             raise ValueError("The schedule tree is None")
         if action_type == tiramisu_actions.TiramisuActionType.INTERCHANGE:
-            return tiramisu_actions.Interchange.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Interchange.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.TILING_2D:
-            return tiramisu_actions.Tiling2D.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Tiling2D.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.TILING_3D:
-            return tiramisu_actions.Tiling3D.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Tiling3D.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.PARALLELIZATION:
-            return tiramisu_actions.Parallelization.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Parallelization.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.SKEWING:
-            return tiramisu_actions.Skewing.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Skewing.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.UNROLLING:
-            return tiramisu_actions.Unrolling.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Unrolling.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.FUSION:
-            return tiramisu_actions.Fusion.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Fusion.get_candidates(schedule.tree)
         elif action_type == tiramisu_actions.TiramisuActionType.REVERSAL:
-            return tiramisu_actions.Reversal.get_candidates(self.schedule.tree)
+            return tiramisu_actions.Reversal.get_candidates(schedule.tree)
         else:
             raise NotImplementedError
 

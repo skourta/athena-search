@@ -8,7 +8,7 @@ packages = [{include = "athena_search"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-athena = {path = "/scratch/sk10691/workspace/gos/gos", develop = true}
+athena = {path = "../athena_python", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

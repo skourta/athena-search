@@ -15,7 +15,7 @@ class HybridDataService(BaseDataService):
         cpps_path: str,
         path_to_save_dataset: str,
         shuffle: bool = False,
-        seed: int = None,
+        seed: int | None = None,
         saving_frequency: int = 10000,
     ):
         super().__init__(

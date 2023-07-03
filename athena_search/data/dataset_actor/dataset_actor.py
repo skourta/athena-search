@@ -4,7 +4,7 @@ from typing import Dict, Literal, TYPE_CHECKING
 
 import ray
 
-from athena.data.dataset_actor.config import DatasetConfig, DatasetFormat
+from .config import DatasetConfig, DatasetFormat
 
 from .services.hybrid_data_service import HybridDataService
 from .services.pickle_data_service import PickleDataService
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 SAVING_FREQUENCY = 10000
 
 
-# @ray.remote
+@ray.remote
 class DatasetActor:
     """
     DatasetActor is a class that is used to read the dataset and update it.
@@ -25,7 +25,7 @@ class DatasetActor:
 
     """
 
-    def __init__(self, config: DatasetConfig, training_mode: Literal["model", "cpu"]):
+    def __init__(self, config: DatasetConfig):
         if config.dataset_format == DatasetFormat.PICKLE:
             self.dataset_service = PickleDataService(
                 config.dataset_path,
@@ -34,7 +34,6 @@ class DatasetActor:
                 config.shuffle,
                 config.seed,
                 config.saving_frequency,
-                training_mode,
             )
         elif config.dataset_format == DatasetFormat.HYBRID:
             self.dataset_service = HybridDataService(
@@ -44,7 +43,6 @@ class DatasetActor:
                 config.shuffle,
                 config.seed,
                 config.saving_frequency,
-                # training_mode,
             )
         else:
             raise ValueError("Unknown dataset format")
@@ -53,8 +51,12 @@ class DatasetActor:
         return self.dataset_service.get_next_function(random)
 
     # Update the dataset with the new function
-    def update_dataset(self, function_name: str, function_dict: dict) -> bool:
-        return self.dataset_service.update_dataset(function_name, function_dict)
+    def update_dataset(
+        self, function_name: str, function_dict: dict, suffix: str = ""
+    ) -> bool:
+        return self.dataset_service.update_dataset(
+            function_name, function_dict, suffix=suffix
+        )
 
     # Get dataset size
     def get_dataset_size(self) -> int:

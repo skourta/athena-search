@@ -10,16 +10,14 @@ class BaseDataService:
         dataset_path: str,
         path_to_save_dataset: str,
         shuffle: bool = False,
-        seed: int = None,
+        seed: int | None = None,
         saving_frequency: int = 10000,
-        training_mode: Literal["model", "cpu"] = "model",
     ) -> None:
         self.dataset_path = dataset_path
         self.path_to_save_dataset = path_to_save_dataset
         self.shuffle = shuffle
         self.seed = seed
         self.saving_frequency = saving_frequency
-        self.training_mode = training_mode
 
         self.dataset = {}
         self.function_names = []
@@ -34,7 +32,9 @@ class BaseDataService:
         pass
 
     # Update the dataset with the new function
-    def update_dataset(self, function_name: str, function_dict: dict) -> bool:
+    def update_dataset(
+        self, function_name: str, function_dict: dict, suffix: str = ""
+    ) -> bool:
         """
         Update the dataset with the new function
         :param function_name: name of the function
@@ -48,13 +48,13 @@ class BaseDataService:
         # print(f"# updates: {self.nbr_updates}")
         if self.nbr_updates % self.saving_frequency == 0:
             if self.nbr_updates % (2 * self.saving_frequency):
-                return self.save_dataset_to_disk(version=2)
+                return self.save_dataset_to_disk(version=2, suffix=suffix)
             else:
-                return self.save_dataset_to_disk(version=1)
+                return self.save_dataset_to_disk(version=1, suffix=suffix)
         return False
 
     # Save the dataset to disk
-    def save_dataset_to_disk(self, version=1) -> bool:
+    def save_dataset_to_disk(self, version=1, suffix: str = "") -> bool:
         """
         Save the dataset to disk
         :param version: version of the dataset to save (1 or 2)
@@ -62,9 +62,7 @@ class BaseDataService:
         """
         logging.info("[Start] Save the legality_annotations_dict to disk")
 
-        updated_dataset_name = (
-            f"{self.path_to_save_dataset}/{self.dataset_name}_updated_{version}"
-        )
+        updated_dataset_name = f"{self.path_to_save_dataset}/{self.dataset_name}_updated_{version}_{suffix}"
         with open(f"{updated_dataset_name}.pkl", "wb") as f:
             pickle.dump(self.dataset, f, protocol=pickle.HIGHEST_PROTOCOL)
 

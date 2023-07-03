@@ -8,3 +8,8 @@ workspace
 htmlcov
 **/.pytest_cache
 dist
+datasets
+**/*.log
+**/*.pkl
+**/*.err
+**/*.out

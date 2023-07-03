@@ -18,9 +18,8 @@ class PickleDataService(BaseDataService):
         cpps_path: str,
         path_to_save_dataset: str,
         shuffle: bool = False,
-        seed: int = None,
+        seed: int | None = None,
         saving_frequency: int = 10000,
-        training_mode: Literal["model", "cpu"] = "model",
     ):
         super().__init__(
             dataset_path=dataset_path,
@@ -28,7 +27,6 @@ class PickleDataService(BaseDataService):
             shuffle=shuffle,
             seed=seed,
             saving_frequency=saving_frequency,
-            training_mode=training_mode,
         )
         self.cpps_path = cpps_path
         self.cpps = {}

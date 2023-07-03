@@ -1,9 +1,9 @@
-
 from dataclasses import dataclass
+import enum
 from typing import Dict
 
 
-class DatasetFormat:
+class DatasetFormat(enum.Enum):
     # Both the CPP code and the data of the functions are loaded from PICKLE files
     PICKLE = "PICKLE"
     # We look for informations in the pickle files, if something is missing we get it from cpp files in a dynamic way
@@ -26,7 +26,7 @@ class DatasetConfig:
     dataset_path: str = ""
     save_path: str = ""
     shuffle: bool = False
-    seed: int = None
+    seed: int | None = None
     saving_frequency: int = 10000
     wrappers_path: str = ""
 
@@ -40,7 +40,6 @@ class DatasetConfig:
         self.shuffle = dataset_config_dict["shuffle"]
         self.seed = dataset_config_dict["seed"]
         self.saving_frequency = dataset_config_dict["saving_frequency"]
-        self.wrappers_path = dataset_config_dict["wrappers_path"]
 
         if dataset_config_dict["is_benchmark"]:
             self.dataset_path = (
@@ -52,9 +51,4 @@ class DatasetConfig:
                 dataset_config_dict["benchmark_cpp_files"]
                 if dataset_config_dict["benchmark_cpp_files"]
                 else self.cpps_path
-            )
-            self.wrappers_path = (
-                dataset_config_dict["benchmark_wrappers_path"]
-                if dataset_config_dict["benchmark_wrappers_path"]
-                else self.wrappers_path
             )

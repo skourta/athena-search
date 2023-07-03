@@ -3,34 +3,20 @@ import logging
 from typing import Any, Dict, List, Literal
 
 import yaml
-from athena.data.dataset_actor.config import DatasetConfig
-
-
-@dataclass
-class TiramisuConfig:
-    tiramisu_path: str = ""
-    env_type: Literal["model", "cpu"] = "model"
-    tags_model_weights: str = ""
-    is_new_tiramisu: bool = False
-    old_tiramisu_path: str = ""
-    max_runs: int = 30
-
-    def __post_init__(self):
-        if not self.is_new_tiramisu:
-            self.tiramisu_path = self.old_tiramisu_path
+from athena.utils.config import AthenaConfig
+from athena.utils.config import BaseConfig as AthenaBaseConfig
+from athena_search.data.dataset_actor.config import DatasetConfig
 
 
 @dataclass
 class AthenaSearchConfig:
-    tiramisu: TiramisuConfig
+    athena: AthenaConfig
     dataset: DatasetConfig
     machine: str = "greene"
-    workspace: str = "workspace"
-    env_vars: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
-        if isinstance(self.tiramisu, dict):
-            self.tiramisu = TiramisuConfig(**self.tiramisu)
+        if isinstance(self.athena, dict):
+            self.athena = AthenaConfig(**self.athena)
         if isinstance(self.dataset, dict):
             self.dataset = DatasetConfig(self.dataset)
 
@@ -45,14 +31,12 @@ def parse_yaml_file(yaml_string: str) -> Dict[Any, Any]:
 
 
 def dict_to_config(parsed_yaml: Dict[Any, Any]) -> AthenaSearchConfig:
-    tiramisu = TiramisuConfig(**parsed_yaml["tiramisu"])
+    athena = AthenaConfig(**parsed_yaml["athena"])
     dataset = DatasetConfig(parsed_yaml["dataset"])
 
     return AthenaSearchConfig(
-        **parsed_yaml["athena"],
-        env_vars=parsed_yaml["env_vars"] if "env_vars" in parsed_yaml else {},
+        athena=athena,
         dataset=dataset,
-        tiramisu=tiramisu,
     )
 
 
@@ -60,10 +44,31 @@ class BaseConfig:
     base_config = None
 
     @classmethod
-    def init(cls, config_yaml="config.yaml", logging_level=logging.DEBUG):
+    def init(
+        cls,
+        config_yaml="config.yaml",
+        logging_level=logging.DEBUG,
+        log_file: str | None = "athena_search.log",
+        worker_id: int = None,
+    ):
         parsed_yaml_dict = parse_yaml_file(read_yaml_file(config_yaml))
         BaseConfig.base_config = dict_to_config(parsed_yaml_dict)
-        logging.basicConfig(
-            level=logging_level,
-            format="|%(asctime)s|%(levelname)s| %(message)s",
-        )
+
+        if worker_id is not None:
+            log_format = f"|worker{worker_id}|%(asctime)s|%(levelname)s| %(message)s"
+        else:
+            log_format = "|%(asctime)s|%(levelname)s| %(message)s"
+
+        if log_file is None:
+            logging.basicConfig(
+                level=logging_level,
+                format=log_format,
+            )
+        else:
+            logging.basicConfig(
+                filename=log_file,
+                filemode="a",
+                level=logging_level,
+                format=log_format,
+            )
+        AthenaBaseConfig.from_athena_config(BaseConfig.base_config.athena)

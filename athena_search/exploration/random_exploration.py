@@ -226,6 +226,11 @@ def initialize_actions(
         )
         loop_levels = schedule.tree.get_iterator_levels(candidate_params)
 
+        if str(schedule) not in schedules_dict:
+            schedules_dict[str(schedule)] = {}
+        if "solver_values" not in schedules_dict[str(schedule)]:
+            schedules_dict[str(schedule)]["solver_values"] = {}
+
         try:
             factors = tiramisu_actions.Skewing.get_factors(
                 schedule=schedule,
@@ -234,10 +239,14 @@ def initialize_actions(
             )
 
         except ValueError:
-            schedules_dict[str(schedule)]["solver_values"][",".join(loop_levels)] = None
+            schedules_dict[str(schedule)]["solver_values"][
+                f"{loop_levels[0]},{loop_levels[1]}"
+            ] = None
             raise SkipActionException("Skewing factors not found")
 
-        schedules_dict[str(schedule)]["solver_values"][",".join(loop_levels)] = factors
+        schedules_dict[str(schedule)]["solver_values"][
+            f"{loop_levels[0]},{loop_levels[1]}"
+        ] = factors
 
         params = [candidate_params[0], candidate_params[1], factors[0], factors[1]]
 
@@ -289,6 +298,71 @@ def get_candidates(
         return tiramisu_actions.Reversal.get_candidates(schedule.tree)
     else:
         raise NotImplementedError
+
+
+def get_random_action(schedule: tiramisu.Schedule):
+    action_type = None
+    candidate = None
+    nbr_tries = 0
+
+    action = None
+
+    while (action_type is None or candidate is None) and nbr_tries < MAX_TRIES:
+        nbr_tries += 1
+
+        logging.info(f"selecting random action nbr_tries: {nbr_tries}")
+        logging.info(f"current schedule: {schedule}")
+
+        candidate = None
+
+        # Randomly select an Action to apply
+        action_type = random.choice(
+            tiramisu.tiramisu_actions.TiramisuAction.get_types()
+        )
+
+        logging.info(f"action_type: {action_type}")
+
+        candidates = get_candidates(action_type, schedule)
+
+        logging.info(f"candidates: {candidates}")
+
+        if len(candidates) == 0:
+            candidate = None
+            logging.info("No candidates found")
+            continue
+
+        # Randomly select a candidate
+        if type(candidates) == list:
+            candidate = random.choice(candidates)
+            if type(candidate) is not list:
+                candidate = [candidate]
+        elif type(candidates) == dict:
+            # Choose a random root (key)
+            root = random.choice(list(candidates.keys()))
+            # choose a random candidate from the root's list of candidates
+            if candidates[root]:
+                candidate = random.choice(candidates[root])
+
+        logging.info(f"chose candidate: {candidate}")
+
+        if candidate is None:
+            continue
+
+        try:
+            action = initialize_actions(
+                action_type=action_type,
+                candidate_params=candidate,
+                schedule=schedule,
+            )
+        except SkipActionException as e:
+            logging.error(f"Skipping action due to {e}")
+            continue
+        except tiramisu_actions.CannotApplyException as e:
+            logging.error(f"Cannot apply this action: {e}")
+            continue
+
+    logging.info(f"initialized action: {action}")
+    return action
 
 
 class SkipActionException(Exception):

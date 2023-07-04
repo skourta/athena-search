@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 SAVING_FREQUENCY = 10000
 
 
-@ray.remote
 class DatasetActor:
     """
     DatasetActor is a class that is used to read the dataset and update it.
@@ -67,3 +66,9 @@ class DatasetActor:
         if function_name not in self.dataset_service.function_names:
             raise ValueError(f"Function {function_name} not in dataset")
         return self.dataset_service.get_function_by_name(function_name)
+
+
+@ray.remote
+class DatasetActorDistributed(DatasetActor):
+    def __init__(self, config: DatasetConfig):
+        super().__init__(config)

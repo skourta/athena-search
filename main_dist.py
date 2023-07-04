@@ -102,6 +102,12 @@ if __name__ == "__main__":
                 f"\n\n Crashed workers: {[id_dict[crashed] for crashed in crashed_workers]}, remaining {len(workers)}\n\n"
             )
 
+            try:
+                ray.get(crashed_workers[0])
+            except Exception as e:
+                logging.error(f"Worker {id_dict[crashed_workers[0]]} crashed: {e}")
+                print(f"Worker {id_dict[crashed_workers[0]]} crashed: {e}")
+
             print("Restarting crashed workers ...")
             for crashed in crashed_workers:
                 ray_worker = function_to_run.remote(

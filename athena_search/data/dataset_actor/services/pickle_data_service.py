@@ -20,6 +20,7 @@ class PickleDataService(BaseDataService):
         shuffle: bool = False,
         seed: int | None = None,
         saving_frequency: int = 10000,
+        suffix: str = "",
     ):
         super().__init__(
             dataset_path=dataset_path,
@@ -27,6 +28,7 @@ class PickleDataService(BaseDataService):
             shuffle=shuffle,
             seed=seed,
             saving_frequency=saving_frequency,
+            suffix=suffix,
         )
         self.cpps_path = cpps_path
         self.cpps = {}
@@ -52,7 +54,12 @@ class PickleDataService(BaseDataService):
         self.dataset_size = len(self.function_names)
 
     # Returns next function name, function data, and function cpps
-    def get_next_function(self, random=False) -> TiramisuProgram:
+    def get_next_function(
+        self, random=False, one_epoch=False
+    ) -> TiramisuProgram | None:
+        if one_epoch and self.current_function_index >= self.dataset_size:
+            return None
+
         if random:
             function_name = np.random.choice(self.function_names)
         # Choose the next function sequentially

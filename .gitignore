@@ -13,3 +13,4 @@ datasets
 **/*.pkl
 **/*.err
 **/*.out
+outputs

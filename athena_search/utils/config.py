@@ -12,7 +12,7 @@ from athena_search.data.dataset_actor.config import DatasetConfig
 class AthenaSearchConfig:
     athena: AthenaConfig
     dataset: DatasetConfig
-    machine: str = "greene"
+    machine: str = "jubail"
 
     def __post_init__(self):
         if isinstance(self.athena, dict):
@@ -49,7 +49,7 @@ class BaseConfig:
         config_yaml="config.yaml",
         logging_level=logging.DEBUG,
         log_file: str | None = "athena_search.log",
-        worker_id: int = None,
+        worker_id: int | str | None = None,
     ):
         parsed_yaml_dict = parse_yaml_file(read_yaml_file(config_yaml))
         BaseConfig.base_config = dict_to_config(parsed_yaml_dict)

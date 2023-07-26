@@ -29,6 +29,7 @@ class DatasetConfig:
     seed: int | None = None
     saving_frequency: int = 10000
     wrappers_path: str = ""
+    suffix: str = ""
 
     def __init__(self, dataset_config_dict: Dict):
         self.dataset_format = DatasetFormat.from_string(

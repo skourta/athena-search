@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Dict, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Literal
 
 import ray
 
 from .config import DatasetConfig, DatasetFormat
-
 from .services.hybrid_data_service import HybridDataService
 from .services.pickle_data_service import PickleDataService
-
 
 if TYPE_CHECKING:
     from athena.tiramisu.tiramisu_program import TiramisuProgram
@@ -33,6 +31,7 @@ class DatasetActor:
                 config.shuffle,
                 config.seed,
                 config.saving_frequency,
+                config.suffix,
             )
         elif config.dataset_format == DatasetFormat.HYBRID:
             self.dataset_service = HybridDataService(
@@ -46,16 +45,12 @@ class DatasetActor:
         else:
             raise ValueError("Unknown dataset format")
 
-    def get_next_function(self, random=False) -> TiramisuProgram:
+    def get_next_function(self, random=False) -> TiramisuProgram | None:
         return self.dataset_service.get_next_function(random)
 
     # Update the dataset with the new function
-    def update_dataset(
-        self, function_name: str, function_dict: dict, suffix: str = ""
-    ) -> bool:
-        return self.dataset_service.update_dataset(
-            function_name, function_dict, suffix=suffix
-        )
+    def update_dataset(self, function_name: str, function_dict: dict) -> bool:
+        return self.dataset_service.update_dataset(function_name, function_dict)
 
     # Get dataset size
     def get_dataset_size(self) -> int:
@@ -72,3 +67,6 @@ class DatasetActor:
 class DatasetActorDistributed(DatasetActor):
     def __init__(self, config: DatasetConfig):
         super().__init__(config)
+
+    def get_dataset(self):
+        return self.dataset_service.dataset

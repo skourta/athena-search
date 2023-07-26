@@ -20,7 +20,7 @@ class ParallelisationExplorer:
         self.schedules_dict = tiramisu_function.schedules_dict
         self.parallelisations_to_enable = []
         self.max_tries = max_tries
-        self.nbr_parallelisations_enabled = 0
+        self.num_parallelisations_enabled = 0
 
     def explore(self) -> None:
         candidates = tiramisu_actions.Parallelization.get_candidates(
@@ -71,7 +71,7 @@ class ParallelisationExplorer:
                 if schedule is not None:
                     logging.info(f"Enabled parallelisation on {iterator}")
                     logging.info(f"Enabling Schedule: {schedule}")
-                    self.nbr_parallelisations_enabled += 1
+                    self.num_parallelisations_enabled += 1
             else:
                 logging.info(f"Parallelisation on {iterator} is legal.")
 
@@ -214,8 +214,9 @@ class ParallelisationExplorer:
 
 def get_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num-workers", default=-1, type=int)
+    parser.add_argument("--num-workers", default=1, type=int)
     parser.add_argument("--suffix", default=socket.gethostname(), type=str)
+    parser.add_argument("--num-nodes", default=1, type=int)
 
     return parser.parse_args()
 
@@ -248,7 +249,7 @@ class ProgressActor:
 def function_to_run(dataset_actor: DatasetActorDistributed, id: int, progress_actor: "ProgressActor", suffix: str = None, max_tries: int = 10):  # type: ignore
     BaseConfig.init(
         logging_level=logging.INFO,
-        log_file=f"parallelization_explorer_{socket.gethostname()}.log",
+        log_file=f"outputs/{suffix}.log",
         worker_id=id,
     )
 
@@ -266,20 +267,25 @@ def function_to_run(dataset_actor: DatasetActorDistributed, id: int, progress_ac
         progress_actor.report_progress.remote(
             id,
             len(explorer.parallelisations_to_enable),
-            explorer.nbr_parallelisations_enabled,
+            explorer.num_parallelisations_enabled,
         )
         print(
-            f"Progress Report: worker {id} explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.nbr_parallelisations_enabled}"
+            f"Progress Report: worker {id} explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.num_parallelisations_enabled}"
         )
         logging.info(
-            f"Progress Report: worker {id} explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.nbr_parallelisations_enabled}"
+            f"Progress Report: worker {id} explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.num_parallelisations_enabled}"
         )
 
 
-def launch_distributed(num_workers: int = -1, suffix: str = "parallelization_explorer"):
+def launch_distributed(
+    num_workers: int = -1, suffix: str = "parallelization_explorer", num_nodes: int = 1
+):
     assert BaseConfig.base_config
 
-    ray.init()
+    if num_nodes > 1:
+        ray.init(address="auto")
+    else:
+        ray.init()
     print(ray.available_resources())
     progress_actor = ProgressActor.remote()
 
@@ -333,37 +339,20 @@ def launch_distributed(num_workers: int = -1, suffix: str = "parallelization_exp
 
 
 if __name__ == "__main__":
-    # BaseConfig.init(logging_level=logging.INFO, log_file=None)
+    args = get_arguments()
+    suffix = f"parallelization_explorer_{args.suffix}"
 
-    # dataset, cpps = load_test_data()
-
-    # # random_function = random.choice(list(dataset.keys()))
-
-    # random_function = "function666728"
-
-    # tiramisu_function = TiramisuProgram.from_dict(
-    #     random_function, dataset[random_function], cpps[random_function]
-    # )
-
-    # print(tiramisu_function)
-
-    # explorer = ParallelisationExplorer(tiramisu_function, 10)
-
-    # explorer.explore()
     BaseConfig.init(
         logging_level=logging.INFO,
-        # log_file=f"parallelization_explorer_{socket.gethostname()}.log",
-        log_file=None,
+        log_file=f"outputs/{suffix}.log",
+        # log_file=None,
     )
     assert BaseConfig.base_config
 
-    args = get_arguments()
     num_workers = args.num_workers
 
-    suffix = f"parallelization_explorer_{args.suffix}"
-
     if num_workers != 1:
-        launch_distributed(num_workers, suffix)
+        launch_distributed(num_workers, suffix, args.num_nodes)
     else:
         dataset_actor = DatasetActor(BaseConfig.base_config.dataset)
 
@@ -382,8 +371,8 @@ if __name__ == "__main__":
             )
 
             print(
-                f"Progress Report: explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.nbr_parallelisations_enabled}"
+                f"Progress Report: explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.num_parallelisations_enabled}"
             )
             logging.info(
-                f"Progress Report: explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.nbr_parallelisations_enabled}"
+                f"Progress Report: explored {len(explorer.parallelisations_to_enable)}, enabled {explorer.num_parallelisations_enabled}"
             )

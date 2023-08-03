@@ -1,6 +1,6 @@
-from abc import abstractmethod
 import logging
 import pickle
+from abc import abstractmethod
 from typing import Literal, Tuple
 
 
@@ -34,7 +34,9 @@ class BaseDataService:
         pass
 
     # Update the dataset with the new function
-    def update_dataset(self, function_name: str, function_dict: dict) -> bool:
+    def update_dataset(
+        self, function_name: str, function_dict: dict, force=False
+    ) -> bool:
         """
         Update the dataset with the new function
         :param function_name: name of the function
@@ -46,6 +48,9 @@ class BaseDataService:
 
         self.nbr_updates += 1
         # print(f"# updates: {self.nbr_updates}")
+        if force:
+            return self.save_dataset_to_disk(version=2)
+
         if self.nbr_updates % self.saving_frequency == 0:
             if self.nbr_updates % (2 * self.saving_frequency):
                 return self.save_dataset_to_disk(version=2)

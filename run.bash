@@ -4,7 +4,7 @@
 #SBATCH --exclusive
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=28
-##SBATCH --cpus-per-task=128
+#############SBATCH --cpus-per-task=128
 #SBATCH -t 7-0:00:00
 #SBATCH -o outputs/job.%J.out
 #SBATCH -e outputs/job.%J.err
@@ -64,7 +64,7 @@ done
 # python -u rl_data_conversion.py --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES
 
 # run Random exploration
-# python -u athena_search/exploration/random_exploration.py --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --num-workers=-1 --dataset-path=datasets/final/final_dataset.pkl
+python -u athena_search/exploration/random_exploration/main.py --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --num-workers=-1 --dataset-path=datasets/final/final_dataset.pkl
 
 
 # # run Exec
@@ -72,4 +72,4 @@ done
 
 
 # # run Initial Executioner
-python -u athena_search/exploration/init_exec_times/main.py --dataset=/scratch/sk10691/workspace/athena/athena_search/datasets/final_dataset_updated_2_executioner_1878945.pkl --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --saving-frequency=5
+# python -u athena_search/exploration/init_exec_times/main.py --dataset=/scratch/sk10691/workspace/athena/athena_search/datasets/final/init_time_exec.pkl --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --saving-frequency=5

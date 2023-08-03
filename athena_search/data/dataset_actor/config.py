@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import enum
+from dataclasses import dataclass
 from typing import Dict
 
 
@@ -39,7 +39,8 @@ class DatasetConfig:
         self.dataset_path = dataset_config_dict["dataset_path"]
         self.save_path = dataset_config_dict["save_path"]
         self.shuffle = dataset_config_dict["shuffle"]
-        self.seed = dataset_config_dict["seed"]
+        if "seed" in dataset_config_dict:
+            self.seed = dataset_config_dict["seed"]
         self.saving_frequency = dataset_config_dict["saving_frequency"]
 
         if dataset_config_dict["is_benchmark"]:

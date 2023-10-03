@@ -70,3 +70,6 @@ class DatasetActorDistributed(DatasetActor):
 
     def get_dataset(self):
         return self.dataset_service.dataset
+
+    def get_function_names(self):
+        return self.dataset_service.function_names

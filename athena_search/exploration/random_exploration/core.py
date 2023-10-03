@@ -183,8 +183,8 @@ def initialize_actions(
     action_type: tiramisu_actions.TiramisuActionType,
     candidate_params,
     schedule: tiramisu.Schedule,
-    tiling_factors: List[int] = [32, 64, 128],
-    unrolling_factors: List[int] = [4, 8, 16],
+    tiling_factors: List[int] = [16, 32, 64, 128, 256, 512],
+    unrolling_factors: List[int] = [2, 4, 8, 16, 32, 64],
     schedules_dict: Dict = {},
 ) -> List[tiramisu_actions.TiramisuAction]:
     # Check if the schedule tree is None

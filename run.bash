@@ -63,8 +63,8 @@ done
 # rl data
 # python -u rl_data_conversion.py --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES
 
-# run Random exploration
-python -u athena_search/exploration/random_exploration/main.py --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --num-workers=-1 --dataset-path=datasets/final/final_dataset.pkl
+# # run Random exploration
+# python -u athena_search/exploration/random_exploration/main.py --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --num-workers=-1 --dataset-path=datasets/final/final_dataset.pkl
 
 
 # # run Exec
@@ -73,3 +73,6 @@ python -u athena_search/exploration/random_exploration/main.py --suffix=$SLURM_J
 
 # # run Initial Executioner
 # python -u athena_search/exploration/init_exec_times/main.py --dataset=/scratch/sk10691/workspace/athena/athena_search/datasets/final/init_time_exec.pkl --suffix=$SLURM_JOB_ID --num-nodes=$SLURM_JOB_NUM_NODES --saving-frequency=5
+
+# run Random exploration
+python -u athena_search/exploration/generate_wrappers/main.py --suffix=$SLURM_JOB_ID --num-workers=-1 --dataset=datasets/final/final_dataset.pkl
